@@ -28,3 +28,7 @@ export const CalculateAnimationSpeed = (gameSpeed:number):number => {
 export function ConvertRemToPixels(rem:number):number {    
   return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
 }
+
+export function CoordinateFromIndex(index:number, height:number):number[] {
+  return [index % height, Math.floor(index/height)]
+}

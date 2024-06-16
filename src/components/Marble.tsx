@@ -48,7 +48,6 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
   const redraw:boolean = manager('redraw').includes(id);
   const Interact:Function = manager('interact');
   const interactState:boolean = manager('interactState');
-  const CheckSwap:Function = manager('swap');
 
   let animation:string = "";
   let translationAnimation:string = "";
@@ -77,10 +76,25 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
 
   if (translate[0] === undefined) {    // newly spawned
     animation = 'animate__bounceInDown'; 
-  } else if (translate[0] !== 0 || translate[1] !== 0) {           // dropping
+  } else if (translate[0] !== 0 || translate[1] !== 0) {    // trasforming translate
+    styleParams.animationDelay = '0s';
+    let translateDrag = [0, 0]
+    if (translate[0] % 1 !== 0) {translateDrag[0] = -Math.round(translate[0])}
+    if (translate[1] % 1 !== 0) {translateDrag[1] = -Math.round(translate[1])}
     translationAnimation =`
       @keyframes animate-translate-${id} {
-        0%     {transform: translateY(${translate[1]*100}%) translateY(${translate[1]}rem);}
+        0%     {
+          transform: 
+            translateX(${Math.round(translate[0])*100}%)
+            translateX(${Math.round(translate[0])}rem)
+            translateX(${Math.round(translateDrag[0])}rem)
+            translateY(${Math.round(translateDrag[0])}rem)
+            translateY(${Math.round(translate[1])*100}%)
+            translateY(${Math.round(translate[1])}rem)
+            translateY(${Math.round(translateDrag[1])}rem)
+            translateX(${Math.round(translateDrag[1])}rem)
+        }
+
         100%   {transform: translate(0);}
       }`
     styleParams.animationName = `animate-translate-${id}`;
@@ -105,10 +119,6 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
     Interact({i: id, e: e});
   }
 
-  const CheckForSwap = (e) => {
-    CheckSwap({i: id, e: e});
-  }
-
   return (
     <React.Fragment>
         {
@@ -123,7 +133,6 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
             AnimationEnd(e)
           }
           onMouseDown={(e) => InitiateDrag(e)}
-          //onMouseOver={CheckForSwap}
         >
         </div>
     </React.Fragment>

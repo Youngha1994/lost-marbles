@@ -1,9 +1,10 @@
 import * as React from 'react';
 import './Board.css';
-import { useRef, useState, CSSProperties } from 'react';
+import { useEffect, useRef, useState, CSSProperties } from 'react';
 import { BlankTile, BlankTileImage, BlankTileProps } from './BlankTile.tsx';
-import { MarbleImage, MarbleImageProps } from './Marble.tsx';
-import { CalculateAnimationSpeed, ConvertRemToPixels, xrange } from '../lib/GridApi.tsx';
+import { Marble, MarbleType, MarbleImage, MarbleImageProps } from './Marble.tsx';
+import { CalculateAnimationSpeed, CoordinateFromIndex, xrange } from '../lib/GridApi.tsx';
+import { INTERACTION_STATES, SPECIALS } from '../lib/Constants.tsx';
 import { ItemType } from '../App.tsx';
 
 interface BoardProps {
@@ -16,24 +17,10 @@ interface BoardProps {
 
 const Board = (BoardProps: BoardProps) => {
   const [matchIndices, setMatchIndices] = useState<number[]>([]);
-  const [boardDataSource, setBoardDataSource] = useState<ItemType[]>(BoardProps.initialBoard);
   const [animation, setAnimation] = useState<string>('animate__bounceInDown');
 
-  /** @const {string: number}  
-   *  NO_MATCH_AFTER_FALLING: start of board. no matching after falling.  
-   *  RELEASE: release interactionState. close to interactionState.  
-   *  ANIMATING: any interactionState. closed to interactionState. animating images  
-   *  AVAILABLE: no interactionState. open to interactionState  
-   *  INTERACTING: interacting with index
-   */
-  const INTERACTION_STATES = {
-    NO_MATCH_AFTER_FALLING: 0,
-    RELEASE_INPUT: 1,
-    ANIMATING: 2,
-    AVAILABLE: 3,
-    INTERACTING: 4
-  }
   const interactionState = useRef<number>(INTERACTION_STATES.NO_MATCH_AFTER_FALLING);
+  const boardDataSource = useRef<ItemType[]>(BoardProps.initialBoard);
   const [interactionIndex, setInteractionIndex] = useState<number>(-1);
   
 
@@ -55,6 +42,8 @@ const Board = (BoardProps: BoardProps) => {
 
   const swapped = useRef<boolean>(false);
   const tileWidth = useRef<number>(0);
+  const specialSpawn = useRef<{[index: number]: number}>({});
+  const lastInteraction = useRef<number[]>([-1, -1]);
 
   let gridIndices:number[][] = xrange(size[1]).map(i => 
     xrange(size[0]).map(
@@ -81,11 +70,11 @@ const Board = (BoardProps: BoardProps) => {
     for (var i=0; i<size[0]; i++) {
       let firstIndex:number[] = [i,0];
       let potentialMatch:number[][] = [firstIndex];
-      let color:string|null = boardDataSource[gridIndices[0][i]]['color'] || null;
+      let color:string|null = boardDataSource.current[gridIndices[0][i]]['color'] || null;
 
       for (var j=0; j<size[1]; j++) {
         // Get the object stored in the next tile. Set to null if the next index is out of range.
-        let nextColor:string|null = (j+1)<size[1] ? boardDataSource[gridIndices[j+1][i]]['color'] || null :null;
+        let nextColor:string|null = (j+1)<size[1] ? boardDataSource.current[gridIndices[j+1][i]]['color'] || null :null;
 
         if (IsMatch(color, nextColor)) {
           potentialMatch.push([i, j+1]);
@@ -98,7 +87,7 @@ const Board = (BoardProps: BoardProps) => {
           firstIndex = [i,j+1];
           potentialMatch = [firstIndex];
           // Reset the current imageObj to that of the next image.
-          color = (j+1)<size[1] ? boardDataSource[gridIndices[j+1][i]]['color'] || null: null;
+          color = (j+1)<size[1] ? boardDataSource.current[gridIndices[j+1][i]]['color'] || null: null;
         }
       }
     }
@@ -112,11 +101,11 @@ const Board = (BoardProps: BoardProps) => {
     for (var j=0; j<size[1]; j++) {
       let firstIndex:number[] = [0,j];
       let potentialMatch:number[][] = [firstIndex];
-      let color:string|null = boardDataSource[gridIndices[j][0]]['color'] || null;
+      let color:string|null = boardDataSource.current[gridIndices[j][0]]['color'] || null;
 
       for (var i=0; i<size[0]; i++) {
         // Get the object stored in the next tile. Set to null if the next index is out of range.
-        let nextColor:string|null = (i+1)<size[0] ? boardDataSource[gridIndices[j][i+1]]['color'] || null: null;
+        let nextColor:string|null = (i+1)<size[0] ? boardDataSource.current[gridIndices[j][i+1]]['color'] || null: null;
 
         if (IsMatch(color, nextColor)) {
           potentialMatch.push([i+1, j]);
@@ -129,7 +118,7 @@ const Board = (BoardProps: BoardProps) => {
           firstIndex = [i+1,j];
           potentialMatch = [firstIndex];
           // Reset the current imageObj to that of the next image.
-          color = (i+1)<size[0] ? boardDataSource[gridIndices[j][i+1]]['color'] || null: null;
+          color = (i+1)<size[0] ? boardDataSource.current[gridIndices[j][i+1]]['color'] || null: null;
         }
       }
     }
@@ -146,20 +135,97 @@ const Board = (BoardProps: BoardProps) => {
     return [...new Set(matchedIndices)];
   }
 
-  const CheckForMatch = () => {
-    const matches = [
+  const CombineMatches = (matches: number[][][]) => {
+    const matchCombined:Object = {};
+    matches.forEach((coordinates, i) => {
+      coordinates.forEach((coordinate) => {
+        if (Object.keys(matchCombined).includes(JSON.stringify(coordinate))) {
+          i = matchCombined[JSON.stringify(coordinate)];
+        }
+      });
+      coordinates.forEach((coordinate) => {
+        matchCombined[JSON.stringify(coordinate)] = i
+      });
+    });
+
+    const matchCache:Object = {};
+    Object.keys(matchCombined).forEach((m) => {
+      const i = matchCombined[m];
+      if (typeof matchCache[i] === 'undefined') {
+        matchCache[i] = [];
+      };
+      matchCache[i].push(JSON.parse(m));
+    })
+    return Object.values(matchCache);
+  }
+
+  /** @params (number[][])
+   *  forcedMatch is an array of number arrays, with each internal array being a coordinate to force to match
+   */
+  const CheckForMatch = (forcedMatch?:number[][]) => {
+    let matches = CombineMatches([
       ...CheckVerticalForMatch(),
-      ...CheckHorizontalForMatch()
-    ];
+      ...CheckHorizontalForMatch(),
+    ]);
+
+    if (forcedMatch) {
+      matches = [
+        ...matches,
+        ...forcedMatch
+      ]
+    }
+
+    console.log(matches);
 
     if (matchIndices.length === 0) {
       if (matches.length > 0) {
+        let newSpecialSpawn:{[index:number]:number} = {};
+        matches.forEach((match) => {
+          let matchType = SPECIALS.NONE;
+          // Calculate coordinate from index.
+          let centerCoordinates = [
+            CoordinateFromIndex(lastInteraction.current[0], size[1]),
+            CoordinateFromIndex(lastInteraction.current[1], size[1]),
+          ];
+          let defaultCenterCoordinate = match[Math.floor(match.length/2)]
+          if (match.length === 4) {
+            // Create rocket
+            if (match.every((val:number[], i:number, arr:number[][]) => val[0] === arr[0][0])) { 
+              // All x-coordinates are the same
+              matchType = SPECIALS.ROCKET_VERTICAL;
+            } else if (match.every((val:number[], i:number, arr:number[][]) => val[1] === arr[0][1])) {
+              // All y-coordinates are the same
+              matchType = SPECIALS.ROCKET_HORIZONTAL;
+            };
+          } else if (match.length > 4) {
+            if (match.every((val:number[], i:number, arr:number[][]) => val[0] === arr[0][0]) ||
+                match.every((val:number[], i:number, arr:number[][]) => val[1] === arr[0][1])) {
+              // Matches are on the same axis
+              matchType = SPECIALS.CTRL_F;
+            } else {
+              matchType = SPECIALS.BOMB;
+            };
+          };
+
+          if (match.some((coordinate) => JSON.stringify(coordinate) === JSON.stringify(centerCoordinates[0]))) {
+            defaultCenterCoordinate = centerCoordinates[0];
+          } else if (match.some((coordinate) => JSON.stringify(coordinate) === JSON.stringify(centerCoordinates[1]))) {
+            defaultCenterCoordinate = centerCoordinates[1];
+          } 
+          if (matchType !== SPECIALS.NONE) {
+            newSpecialSpawn[gridIndices[defaultCenterCoordinate[1]][defaultCenterCoordinate[0]]] = matchType;
+          };
+        })
+        lastInteraction.current = [-1, -1];
+        specialSpawn.current = newSpecialSpawn;
         setDelay(Array(indices.length).fill(0));
         setAnimation("animate__bounceOutDown");
         setMatchIndices(IndexMatches(matches));
+        setInteractionIndex(-1);
         return true
       } else {
         interactionState.current = INTERACTION_STATES.AVAILABLE;
+        setInteractionIndex(-1);
         return false
       }
     }
@@ -169,6 +235,7 @@ const Board = (BoardProps: BoardProps) => {
     if (matchIndices.length === 0) {
       interactionState.current = INTERACTION_STATES.ANIMATING;
       CheckForMatch();
+      setInteractionIndex(-1);
     }
   }
 
@@ -176,14 +243,19 @@ const Board = (BoardProps: BoardProps) => {
 
   const CheckForRefill = (id:number) => {
     refillIndices.push(id);
+    console.log("Refill")
     if (JSON.stringify(matchIndices.sort()) === JSON.stringify(refillIndices.sort())) {
       // Get each BlankTile and recursively get the Tile above it.
       
       let newTranslate:(number|undefined)[][] = Array.from({length:indices.length}, () => [0, 0]);
-      const newBoard = boardDataSource.slice(0);
+      const newBoard = boardDataSource.current.slice(0);
       const newRedraws:number[] = [];
       refillIndices.forEach((i) => {
-        newBoard[i] = BlankTile();
+        if (Object.keys(specialSpawn.current).includes(i.toString())) {
+          newBoard[i] = Marble({color: ['black', 'white', 'cyan', 'gray', 'magenta'][specialSpawn.current[i]]});
+        } else {
+          newBoard[i] = BlankTile();
+        }
       });
       for (var i=newBoard.length-1; i>=0; i--) {
         if (newBoard[i].type === "blank") {
@@ -205,7 +277,7 @@ const Board = (BoardProps: BoardProps) => {
             newTranslate[i][0] = undefined; // Signals to the Marble that it should use the dropInDown animation.
           }
       });
-      setBoardDataSource(newBoard);
+      boardDataSource.current = newBoard;
       setTranslate(newTranslate)
       setAnimation("animate-refill")
       setRedrawTiles([...new Set(newRedraws)]);
@@ -227,7 +299,6 @@ const Board = (BoardProps: BoardProps) => {
       } else if (interactionState.current === INTERACTION_STATES.ANIMATING) {
         CheckForMatch();
       };
-
     }
   }
 
@@ -269,113 +340,112 @@ const Board = (BoardProps: BoardProps) => {
     if (params) {
       if (interactionState.current === INTERACTION_STATES.AVAILABLE) {
         interactionState.current = INTERACTION_STATES.INTERACTING;
+        setTranslateDrag([0, 0]);
+        const targetElement = params.e.nativeEvent.target as Element;
+        const targetBox = targetElement.getBoundingClientRect();
+        tileWidth.current = targetBox.width;
+        interactPosition.current = [
+          targetBox.x + targetBox.width/2,
+          targetBox.y + targetBox.height/2
+        ];
+        setInteractionIndex(params.i);
       }
-      setInteractionIndex(params.i);
-      setTranslateDrag([0, 0]);
-      const targetElement = params.e.nativeEvent.target as Element;
-      const targetBox = targetElement.getBoundingClientRect();
-      tileWidth.current = targetBox.width;
-      interactPosition.current = [
-        targetBox.x + targetBox.width/2,
-        targetBox.y + targetBox.height/2
-      ]
     }
     return interactionIndex
   }
 
-  const CheckForSwap = (params: {i:number, e: React.MouseEvent}):boolean => {
-    const id = params.i;
-    const e = params.e;
-    if (indices.includes(interactionIndex) && indices.includes(id) && interactionState.current === INTERACTION_STATES.INTERACTING) {
-      
-      console.log(`You moved over ${id} and are holding ${interactionIndex} located at ${interactPosition.current}.`);
-      const swappableIndices = [
-        id - 1,
-        id + 1,
-        id - size[1],
-        id + size[1]
-      ];
-
-      if ((swappableIndices.includes(interactionIndex) || bulletTime)) {
-        console.log("Eligible move.");
-        console.log(e.pageX, e.pageY);
-        const newBoardDataSource = boardDataSource.slice(0);
-        newBoardDataSource[id] = boardDataSource[interactionIndex];
-        newBoardDataSource[interactionIndex] = boardDataSource[id];
-        const targetElement = e.nativeEvent.target as Element;
-        const targetBox = targetElement.getBoundingClientRect();
-        interactPosition.current = [
-          targetBox.x + targetBox.width/2,
-          targetBox.y + targetBox.height/2
-        ]
-        setInteractionIndex(id);
-        setBoardDataSource(newBoardDataSource);
-      };
-      return true
-    } else {
-      return false
-    }
-  }
-
   const SwapIndices = (swapIndex: number) => {
-    const newBoardDataSource = boardDataSource.slice(0);
+    if (interactionState.current !== INTERACTION_STATES.ANIMATING) return
+    const newBoardDataSource = boardDataSource.current.slice(0);
     const newIndex = interactionIndex + swapIndex;
     if (newIndex < 0 || newIndex > indices.length) return false
-    newBoardDataSource[newIndex] = boardDataSource[interactionIndex];
-    newBoardDataSource[interactionIndex] = boardDataSource[newIndex];
+    if (Math.abs((newIndex % size[1]) - (interactionIndex % size[1])) >= (size[1]-1)) return false
+    // Change internal board data
+    newBoardDataSource[newIndex] = boardDataSource.current[interactionIndex];
+    newBoardDataSource[interactionIndex] = boardDataSource.current[newIndex];
     swapped.current = true;
-    setBoardDataSource(newBoardDataSource);
+    boardDataSource.current = newBoardDataSource;
+
+    // Change translate state to tell children objects to transform.
+    const newTranslate = translate.slice(0);
+    switch (newIndex) {
+      case interactionIndex - 1:
+        newTranslate[interactionIndex] = [ -1.1,    0];
+        newTranslate[newIndex]         = [    1,    0];
+        break;
+      case interactionIndex + 1:
+        newTranslate[interactionIndex] = [    1,    0];
+        newTranslate[newIndex]         = [ -1.1,    0];
+        break;
+      case interactionIndex - size[1]:
+        newTranslate[interactionIndex] = [    0, -1.1];
+        newTranslate[newIndex]         = [    0,    1];
+        break;
+      case interactionIndex + size[1]:
+        newTranslate[interactionIndex] = [    0,    1];
+        newTranslate[newIndex]         = [    0, -1.1];
+        break;
+      default:
+        newTranslate[interactionIndex] = [    0,    0];
+        newTranslate[newIndex]         = [    0,    0];
+        break;
+    }
+    setTranslate(newTranslate);
+    setRedrawTiles([interactionIndex, newIndex]);
+    lastInteraction.current = [interactionIndex, newIndex];
+    setInteractionIndex(-1)
     ReleaseInteract();
     return true
   }
   
   const MoveInteract = (e:React.MouseEvent):void => {
-    console.log("moving")
-    if (interactionIndex < 0 ) return
+    if (interactionIndex < 0 || interactionState.current === INTERACTION_STATES.ANIMATING) return
     if (interactionState.current === INTERACTION_STATES.AVAILABLE) {
       interactionState.current = INTERACTION_STATES.INTERACTING;
     }
-    if (bulletTime) {
-      // Initiate countdown for bullet time and anchor marble to the mouse.
-    } else {
-      const targetElement = e.nativeEvent.target as Element;
-      const tolerance:number = tileWidth.current * .22;
-      
-
-      const offsetX:number = e.pageX - interactPosition.current[0];
-      const offsetY:number = e.pageY - interactPosition.current[1];
-      if (Math.abs(offsetX) > Math.abs(offsetY)) {
-        if (Math.abs(offsetX) > 4*tolerance) {
-          const swapIndex = offsetX > 0 ? 1 : -1;
-          SwapIndices(swapIndex);
-          return
-        } else if (tolerance < Math.abs(offsetX)) {
-          if (translateDrag[1] === 0) return setTranslateDrag([offsetX>0?1:-1, 0])
+    if (interactionState.current === INTERACTION_STATES.INTERACTING) {
+      if (bulletTime) {
+        // Initiate countdown for bullet time and anchor marble to the mouse.
+      } else {
+        const tolerance:number = tileWidth.current * .15;
+        const toleranceMultiplier:number = 5;
+        const offsetX:number = e.pageX - interactPosition.current[0];
+        const offsetY:number = e.pageY - interactPosition.current[1];
+        if (Math.abs(offsetX) > Math.abs(offsetY)) {
+          if (Math.abs(offsetX) >= toleranceMultiplier*tolerance) {
+            const swapIndex = offsetX > 0 ? 1 : -1;
+            interactionState.current = INTERACTION_STATES.ANIMATING;
+            SwapIndices(swapIndex);
+            return;
+          } else if (tolerance < Math.abs(offsetX)) {
+            if (translateDrag[1] === 0) return setTranslateDrag([offsetX>0?1:-1, 0]);
+          };
+        } else if (Math.abs(offsetY) >= Math.abs(offsetX)) {
+          if (Math.abs(offsetY) > toleranceMultiplier*tolerance) {
+            const swapIndex = offsetY > 0 ? size[1] : -size[1];
+            interactionState.current = INTERACTION_STATES.ANIMATING;
+            SwapIndices(swapIndex);
+            return;
+          } else if (tolerance < Math.abs(offsetY)) {
+            if (translateDrag[0] === 0) return setTranslateDrag([0, offsetY>0?1:-1]);
+          };
         }
-      } else if (Math.abs(offsetY) > Math.abs(offsetX)) {
-        if (Math.abs(offsetY) > 4*tolerance) {
-          const swapIndex = offsetY > 0 ? size[1] : -size[1];
-          SwapIndices(swapIndex);
-          return
-        } else if (tolerance < Math.abs(offsetY)) {
-          if (translateDrag[0] === 0) return setTranslateDrag([0, offsetY>0?1:-1])
-        }
-      } 
-      return setTranslateDrag([0, 0])
-    }
-  }
+        return setTranslateDrag([0, 0]);
+      };
+    };
+  };
 
   const ReleaseInteract = () => {
     if (interactionState.current === INTERACTION_STATES.INTERACTING) {
       if (swapped.current) {
         swapped.current = false;
         interactionState.current = INTERACTION_STATES.RELEASE_INPUT;
-        CheckForPlayerMatch();
+        return CheckForPlayerMatch();
       } else {
         interactionState.current = INTERACTION_STATES.AVAILABLE;
+        setInteractionIndex(-1);
       };
     };
-    setInteractionIndex(-1);
   }
 
   const RevertInteract = () => {
@@ -409,8 +479,6 @@ const Board = (BoardProps: BoardProps) => {
           return Interact;
         case 'interactState':
           return interactionState.current === INTERACTION_STATES.INTERACTING;
-        case 'swap':
-          return CheckForSwap;
         case 'translateDrag':
           return translateDrag;
         default:
@@ -432,7 +500,7 @@ const Board = (BoardProps: BoardProps) => {
       onMouseLeave = {RevertInteract}
       onMouseMove = {(e:React.MouseEvent) => MoveInteract(e)}
       >
-       {boardDataSource.map(function(item:ItemType, index) {
+       {boardDataSource.current.map(function(item:ItemType, index) {
         if (item.type === 'marble') {
           const marbleImageProps:MarbleImageProps = {
             id: index,
@@ -440,7 +508,7 @@ const Board = (BoardProps: BoardProps) => {
             animationSpeed: CalculateAnimationSpeed(gameSpeed),
             animation: animation,
             manager: ManageChildComponent,
-            boardDataSource: boardDataSource,
+            boardDataSource: boardDataSource.current,
           }
           return <MarbleImage key={index} {...marbleImageProps} />
         }
