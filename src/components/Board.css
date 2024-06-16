@@ -1,0 +1,10 @@
+#board {
+    display: grid;
+    justify-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#board div {
+    aspect-ratio: 1;
+}
