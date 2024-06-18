@@ -10,7 +10,7 @@ var seedrandom = require('seedrandom');
 export type ItemType = BlankTileType | MarbleType;
 
 const DEFAULT_COLORS:string[] = [
-  "red", "yellow", "blue", "orange", "green", "purple"
+  "red", "yellow", "blue", "orange", "green"
 ]
 
 const Scores = (params) => {

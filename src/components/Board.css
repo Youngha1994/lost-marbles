@@ -1,10 +1,15 @@
 #board {
-    display: grid;
-    justify-items: center;
-    justify-content: center;
-    overflow: hidden;
+  display: grid;
+  justify-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1rem 0;
 }
 
 #board div {
-    aspect-ratio: 1;
+  aspect-ratio: 1;
+}
+
+.tile-container {
+  margin: 10%;
 }

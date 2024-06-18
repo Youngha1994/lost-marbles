@@ -29,3 +29,12 @@ export const SPECIALS = {
   CTRL_F: 4,
   CTRL_A: 5,
 };
+
+export const ANIMATION_EFFECTS = {
+  NONE: 'no-animation',
+  CREATE_SPECIAL: 'create-special',
+}
+
+export const SPECIALS_COLORS = ['black', 'white', 'cyan', 'gray', 'magenta']
+
+export const MARGIN_PERCENTAGE = 0.1

@@ -1,7 +1,9 @@
 import * as React from 'react';
+import { useEffect } from 'react'
 import './Marble.css'
 import 'animate.css';
 import { ItemType } from '../App.tsx'
+import { MARGIN_PERCENTAGE, SPECIALS_COLORS } from '../lib/Constants.tsx'
 
 export interface MarbleType {
   type: 'marble',
@@ -16,7 +18,6 @@ export interface MarbleImageProps {
   id: number,
   delay: number[],
   animationSpeed: number,
-  animation: string,
   manager: Function,
   boardDataSource: ItemType[],
 };
@@ -39,7 +40,6 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
   let delay:number = MarbleImageProps.delay[id];
   let animationSpeed:number = MarbleImageProps.animationSpeed;
   let layer:number = 1;
-  let animationClass:string = MarbleImageProps.animation;
   const manager:Function = MarbleImageProps.manager
   const translate:number = manager('translate')[id]
   
@@ -62,7 +62,7 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
 
   if (Interact() === id && interactState) {
     const translateDrag:number[] = manager('translateDrag');
-    styleParams.animationName = 'pulseInteract'
+    styleParams.animationName = 'pulse-interact'
     styleParams.animationDelay = '0s';
     styleParams.animationDuration = `${animationSpeed*2}s`;
     styleParams.animationIterationCount = 'infinite';
@@ -70,48 +70,71 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
     styleParams.transition = `translate .5s`;
   }
 
-  if (matched || redraw) {
-    animation = animationClass;
+  if (matched) {
+    styleParams.animationName = 'animate-bounceOutDown';
+    styleParams.animationDuration = `${animationSpeed/3}s`;
+  } else {
+    animation = 'animate-refill'
   }
 
   if (translate[0] === undefined) {    // newly spawned
     animation = 'animate__bounceInDown'; 
-  } else if (translate[0] !== 0 || translate[1] !== 0) {    // trasforming translate
-    styleParams.animationDelay = '0s';
-    let translateDrag = [0, 0]
-    if (translate[0] % 1 !== 0) {translateDrag[0] = -Math.round(translate[0])}
-    if (translate[1] % 1 !== 0) {translateDrag[1] = -Math.round(translate[1])}
-    translationAnimation =`
-      @keyframes animate-translate-${id} {
-        0%     {
-          transform: 
-            translateX(${Math.round(translate[0])*100}%)
-            translateX(${Math.round(translate[0])}rem)
-            translateX(${Math.round(translateDrag[0])}rem)
-            translateY(${Math.round(translateDrag[0])}rem)
-            translateY(${Math.round(translate[1])*100}%)
-            translateY(${Math.round(translate[1])}rem)
-            translateY(${Math.round(translateDrag[1])}rem)
-            translateX(${Math.round(translateDrag[1])}rem)
-        }
+  } else if (translate[0] !== 0 || translate[1] !== 0) {    // transforming translate
 
-        100%   {transform: translate(0);}
-      }`
-    styleParams.animationName = `animate-translate-${id}`;
-    styleParams.animationDuration = `${animationSpeed/2}s`;
-    animation = animationClass;
-  } 
+    styleParams.animationDelay = '0s';
+    let translateDrag = [0, 0];
+    const marginPercentageReversed = 100/(1-2*MARGIN_PERCENTAGE);
+    if (translate[0] % 1 === 0.2 || translate[1] % 1 === 0.2 || translate[0] % 1 === -0.8 || translate[1] % 1 === -0.8) {
+      translationAnimation =`
+        @keyframes animate-translate-${id} {
+          0%   {transform: translate(0);}
+          100%     {
+            transform: 
+              translateX(${Math.round(translate[0])*marginPercentageReversed}%)
+              translateY(${Math.round(translate[1])*marginPercentageReversed}%)
+          }
+        }`;
+        styleParams.animationName = `animate-translate-${id}`;
+        styleParams.animationDuration = `${animationSpeed/3}s`;
+        animation = 'animate-translate';
+        styleParams.animationDelay = `0s`;
+    } else {
+      if (translate[0] % 1 === 0.1) {translateDrag[0] = -Math.round(translate[0]); styleParams.animationDelay = "0.5s";};
+      if (translate[1] % 1 === 0.1) {translateDrag[1] = -Math.round(translate[1]); styleParams.animationDelay = "0.5s";};
+      translationAnimation =`
+        @keyframes animate-fall-${id} {
+          0%     {
+            transform: 
+              translateX(${Math.round(translate[0])*marginPercentageReversed}%)
+              translateX(${Math.round(translateDrag[0])}rem)
+              translateY(${Math.round(translateDrag[0])}rem)
+              translateY(${Math.round(translate[1])*marginPercentageReversed}%)
+              translateY(${Math.round(translateDrag[1])}rem)
+              translateX(${Math.round(translateDrag[1])}rem)
+          }
+  
+          100%   {transform: translate(0);}
+        }`;
+      styleParams.animationName = `animate-fall-${id}`;
+      styleParams.animationDuration = `${animationSpeed/2}s`;
+      animation = 'animate-fall';
+    }
+  }
 
   const AnimationEnd = (e:React.AnimationEvent<HTMLDivElement>):void => {
-    if (matched) {
+    if (matched  || animation === 'animate-translate') {
       MarbleImageProps.manager('refill', Number(id));
-    } 
+    } else 
     if (redraw) {
       MarbleImageProps.manager('redraw', Number(id));
-    }
+    } else 
     if (translate[0] !== 0 || translate[1] !== 0) {
       translationAnimation = "";
       MarbleImageProps.manager('refill', Number(id));
+    }
+    if (e.animationName === 'create-special') {
+      const element = e.target as Element;
+      element.classList.remove('create-special');
     }
   };
 
@@ -136,6 +159,5 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
         >
         </div>
     </React.Fragment>
-    
   );
 };

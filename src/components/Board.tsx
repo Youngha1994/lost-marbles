@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, CSSProperties } from 'react';
 import { BlankTile, BlankTileImage, BlankTileProps } from './BlankTile.tsx';
 import { Marble, MarbleType, MarbleImage, MarbleImageProps } from './Marble.tsx';
 import { CalculateAnimationSpeed, CoordinateFromIndex, xrange } from '../lib/GridApi.tsx';
-import { INTERACTION_STATES, SPECIALS } from '../lib/Constants.tsx';
+import { ANIMATION_EFFECTS, INTERACTION_STATES, SPECIALS, SPECIALS_COLORS } from '../lib/Constants.tsx';
 import { ItemType } from '../App.tsx';
 
 interface BoardProps {
@@ -17,12 +17,7 @@ interface BoardProps {
 
 const Board = (BoardProps: BoardProps) => {
   const [matchIndices, setMatchIndices] = useState<number[]>([]);
-  const [animation, setAnimation] = useState<string>('animate__bounceInDown');
-
-  const interactionState = useRef<number>(INTERACTION_STATES.NO_MATCH_AFTER_FALLING);
-  const boardDataSource = useRef<ItemType[]>(BoardProps.initialBoard);
   const [interactionIndex, setInteractionIndex] = useState<number>(-1);
-  
 
   const size:number[] = BoardProps.size;
   const gameSpeed:number = BoardProps.gameSpeed;
@@ -37,13 +32,15 @@ const Board = (BoardProps: BoardProps) => {
   )
   
   const [redrawTiles, setRedrawTiles] = useState<number[]>(indices.slice(0));
-  const [translate, setTranslate] = useState<(number|undefined)[][]>(Array.from({length:indices.length}, () => [0, 0]));
+  const [translate, setTranslate] = useState<(number|undefined)[][]>(Array.from({length:indices.length}, () => [undefined, undefined]));
   const [translateDrag, setTranslateDrag] = useState<number[]>([0, 0])
 
   const swapped = useRef<boolean>(false);
   const tileWidth = useRef<number>(0);
   const specialSpawn = useRef<{[index: number]: number}>({});
   const lastInteraction = useRef<number[]>([-1, -1]);
+  const interactionState = useRef<number>(INTERACTION_STATES.NO_MATCH_AFTER_FALLING);
+  const boardDataSource = useRef<ItemType[]>(BoardProps.initialBoard);
 
   let gridIndices:number[][] = xrange(size[1]).map(i => 
     xrange(size[0]).map(
@@ -175,11 +172,10 @@ const Board = (BoardProps: BoardProps) => {
       ]
     }
 
-    console.log(matches);
-
     if (matchIndices.length === 0) {
       if (matches.length > 0) {
         let newSpecialSpawn:{[index:number]:number} = {};
+        let newTranslate:(number|undefined)[][] = Array.from({length:indices.length}, () => [0, 0]);
         matches.forEach((match) => {
           let matchType = SPECIALS.NONE;
           // Calculate coordinate from index.
@@ -212,15 +208,20 @@ const Board = (BoardProps: BoardProps) => {
           } else if (match.some((coordinate) => JSON.stringify(coordinate) === JSON.stringify(centerCoordinates[1]))) {
             defaultCenterCoordinate = centerCoordinates[1];
           } 
+          
           if (matchType !== SPECIALS.NONE) {
             newSpecialSpawn[gridIndices[defaultCenterCoordinate[1]][defaultCenterCoordinate[0]]] = matchType;
+            match.forEach((m) => {
+              newTranslate[gridIndices[m[1]][m[0]]] = [defaultCenterCoordinate[0] - m[0] + .2, defaultCenterCoordinate[1] - m[1] + .2]
+            })
           };
         })
         lastInteraction.current = [-1, -1];
         specialSpawn.current = newSpecialSpawn;
+
         setDelay(Array(indices.length).fill(0));
-        setAnimation("animate__bounceOutDown");
         setMatchIndices(IndexMatches(matches));
+        setTranslate(newTranslate);
         setInteractionIndex(-1);
         return true
       } else {
@@ -240,19 +241,23 @@ const Board = (BoardProps: BoardProps) => {
   }
 
   let refillIndices:number[] = [];
-
+  const [animationEffect, setAnimationEffect] = useState<string[]>(Array(indices.length).fill(ANIMATION_EFFECTS.NONE))
   const CheckForRefill = (id:number) => {
     refillIndices.push(id);
-    console.log("Refill")
-    if (JSON.stringify(matchIndices.sort()) === JSON.stringify(refillIndices.sort())) {
+    if (JSON.stringify(matchIndices.sort()) === JSON.stringify(Array.from(new Set(refillIndices)).sort())) {
       // Get each BlankTile and recursively get the Tile above it.
-      
       let newTranslate:(number|undefined)[][] = Array.from({length:indices.length}, () => [0, 0]);
       const newBoard = boardDataSource.current.slice(0);
       const newRedraws:number[] = [];
+      const newAnimationEffect:string[] = animationEffect.slice(0);
       refillIndices.forEach((i) => {
+        console.log(i)
+        console.log(specialSpawn.current)
+        console.log(Object.keys(specialSpawn.current).includes(i.toString()))
         if (Object.keys(specialSpawn.current).includes(i.toString())) {
-          newBoard[i] = Marble({color: ['black', 'white', 'cyan', 'gray', 'magenta'][specialSpawn.current[i]]});
+          newBoard[i] = Marble({color: SPECIALS_COLORS[specialSpawn.current[i]]});
+          newAnimationEffect[i] = ANIMATION_EFFECTS.CREATE_SPECIAL;
+          console.log(newAnimationEffect)
         } else {
           newBoard[i] = BlankTile();
         }
@@ -278,8 +283,7 @@ const Board = (BoardProps: BoardProps) => {
           }
       });
       boardDataSource.current = newBoard;
-      setTranslate(newTranslate)
-      setAnimation("animate-refill")
+      setTranslate(newTranslate);
       setRedrawTiles([...new Set(newRedraws)]);
       setMatchIndices([])
       setDelay(Array(indices.length).fill(0))
@@ -289,7 +293,7 @@ const Board = (BoardProps: BoardProps) => {
   let redrawIndices = useRef(new Set<number>([]));
   const CheckForRedraw = (id:number) => {
     redrawIndices.current.add(id);
-    if (JSON.stringify(redrawTiles.sort()) === JSON.stringify(Array.from(redrawIndices.current).sort())) {
+    if (JSON.stringify(Array.from(new Set(redrawTiles)).sort()) === JSON.stringify(Array.from(redrawIndices.current).sort())) {
       redrawIndices.current = new Set<number>([]);
       setRedrawTiles([]);
       setTranslate(Array.from({length:indices.length}, () => [0, 0]));
@@ -464,6 +468,11 @@ const Board = (BoardProps: BoardProps) => {
           return CheckForRedraw(id);
         case 'animateRefill':
           return CheckForAnimateRefill(id);
+        case 'special':
+          if (Object.keys(specialSpawn.current).includes(id.toString())) {
+            return specialSpawn.current[id.toString()]
+          }
+          return 0
         default:
           throw new Error('Missing ID');
       }
@@ -506,19 +515,20 @@ const Board = (BoardProps: BoardProps) => {
             id: index,
             delay: delay,
             animationSpeed: CalculateAnimationSpeed(gameSpeed),
-            animation: animation,
             manager: ManageChildComponent,
             boardDataSource: boardDataSource.current,
           }
-          return <MarbleImage key={index} {...marbleImageProps} />
-        }
+          return (
+            <MarbleImage key={index} {...marbleImageProps} />
+          );
+        };
         const blankTileProps:BlankTileProps = {
           id: index, 
           redrawTiles: redrawTiles, 
-          translate: translate,
+          translate: translate, 
           manager:ManageChildComponent
-        }
-        return <BlankTileImage key={index} {...blankTileProps}   />
+        };
+        return <BlankTileImage key={index} {...blankTileProps} />
       })}
     </div>
   );
