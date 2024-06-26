@@ -1,14 +1,15 @@
 import * as React from 'react';
-import { useEffect } from 'react'
 import './Marble.css'
 import 'animate.css';
 import { ItemType } from '../App.tsx'
-import { MARGIN_PERCENTAGE, SPECIALS_COLORS } from '../lib/Constants.tsx'
+import { CoordinateFromIndex } from '../lib/GridApi.tsx';
+import { MARGIN_PERCENTAGE, TRANSLATE_MODES } from '../lib/Constants.tsx'
 
 export interface MarbleType {
-  type: 'marble',
-  color: string
+  type: 'marble';
+  color: string;
 }
+
 
 export interface MarbleProps {
   color: string
@@ -84,14 +85,14 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
     styleParams.animationDelay = '0s';
     let translateDrag = [0, 0];
     const marginPercentageReversed = 100/(1-2*MARGIN_PERCENTAGE);
-    if (translate[0] % 1 === 0.2 || translate[1] % 1 === 0.2 || translate[0] % 1 === -0.8 || translate[1] % 1 === -0.8) {
+    if (translate[2] === TRANSLATE_MODES.FROM_0) {
       translationAnimation =`
         @keyframes animate-translate-${id} {
           0%   {transform: translate(0);}
           100%     {
             transform: 
-              translateX(${Math.round(translate[0])*marginPercentageReversed}%)
-              translateY(${Math.round(translate[1])*marginPercentageReversed}%)
+              translateX(${translate[0]*marginPercentageReversed}%)
+              translateY(${translate[1]*marginPercentageReversed}%)
           }
         }`;
         styleParams.animationName = `animate-translate-${id}`;
@@ -99,21 +100,25 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
         animation = 'animate-translate';
         styleParams.animationDelay = `0s`;
     } else {
-      if (translate[0] % 1 === 0.1) {translateDrag[0] = -Math.round(translate[0]); styleParams.animationDelay = "0.5s";};
-      if (translate[1] % 1 === 0.1) {translateDrag[1] = -Math.round(translate[1]); styleParams.animationDelay = "0.5s";};
+      if (translate[2] === TRANSLATE_MODES.TO_0) {
+        translateDrag[0] = -.25*translate[0]; 
+        translateDrag[1] = -.25*translate[1];
+      };
       translationAnimation =`
         @keyframes animate-fall-${id} {
           0%     {
             transform: 
-              translateX(${Math.round(translate[0])*marginPercentageReversed}%)
-              translateX(${Math.round(translateDrag[0])}rem)
-              translateY(${Math.round(translateDrag[0])}rem)
-              translateY(${Math.round(translate[1])*marginPercentageReversed}%)
-              translateY(${Math.round(translateDrag[1])}rem)
-              translateX(${Math.round(translateDrag[1])}rem)
+              translateX(${translate[0]*marginPercentageReversed}%)
+              translateX(${translateDrag[0]}rem)
+              translateY(${translate[1]*marginPercentageReversed}%)
+              translateY(${translateDrag[1]}rem)
+
+              
+              translateY(${translateDrag[0]}rem)
+              translateX(${translateDrag[1]}rem)
           }
   
-          100%   {transform: translate(0);}
+          100% {transform: translate(0);}
         }`;
       styleParams.animationName = `animate-fall-${id}`;
       styleParams.animationDuration = `${animationSpeed/2}s`;
@@ -141,7 +146,7 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
   const InitiateDrag = (e:React.MouseEvent) => {
     Interact({i: id, e: e});
   }
-
+  const coord = CoordinateFromIndex(id, 9)
   return (
     <React.Fragment>
         {
@@ -156,7 +161,7 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
             AnimationEnd(e)
           }
           onMouseDown={(e) => InitiateDrag(e)}
-        >
+        ><p>{id}</p><p>({coord[0]},{coord[1]})</p>
         </div>
     </React.Fragment>
   );

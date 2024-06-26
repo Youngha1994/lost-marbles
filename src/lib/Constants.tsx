@@ -13,28 +13,15 @@ export const INTERACTION_STATES = {
   INTERACTING: 4,
 };
 
-/** @const {string: number}  
- *  NONE: default  
- *  ROCKET_HORIZONTAL: clears horizontal  
- *  ROCKET_VERTICAL: clears vertical  
- *  BOMB: clears neighbors  
- *  CTRL_F: clears color  
- *  CTRL_A: clears all  
- */
-export const SPECIALS = {
-  NONE: 0,
-  ROCKET_HORIZONTAL: 1,
-  ROCKET_VERTICAL: 2,
-  BOMB: 3,
-  CTRL_F: 4,
-  CTRL_A: 5,
-};
-
 export const ANIMATION_EFFECTS = {
   NONE: 'no-animation',
   CREATE_SPECIAL: 'create-special',
-}
-
-export const SPECIALS_COLORS = ['black', 'white', 'cyan', 'gray', 'magenta']
+};
 
 export const MARGIN_PERCENTAGE = 0.1
+
+export const TRANSLATE_MODES = {
+  TO_0: 0,
+  FROM_0: 1,
+  EASE_IN: 2
+}

@@ -1,13 +1,16 @@
 import * as React from 'react';
-import { useState } from 'react'
-import './App.css'
-import { Marble, MarbleType } from './components/Marble.tsx'
-import { BlankTile, BlankTileType } from './components/BlankTile.tsx'
-import Board from './components/Board.tsx'
+import { useState } from 'react';
+import './App.css';
+import { Marble, MarbleType } from './components/Marble.tsx';
+import { BlankTile, BlankTileType } from './components/BlankTile.tsx';
+import { SPECIALS, SpecialType } from './components/Special.tsx';
+import Board from './components/Board.tsx';
 import { xrange } from './lib/GridApi.tsx';
 var seedrandom = require('seedrandom');
 
-export type ItemType = BlankTileType | MarbleType;
+export type ItemType = BlankTileType | MarbleType | SpecialType;
+
+export const MovableType = ["marble", "special"]
 
 const DEFAULT_COLORS:string[] = [
   "red", "yellow", "blue", "orange", "green"
@@ -31,10 +34,13 @@ const Scores = (params) => {
 const App = () => {
   const [score, setScore] = useState<number>(0)
   const [targetScore, setTargetScore] = useState<number>(0)
-  const [size, setSize] = useState<[number, number]>([8, 8])
+  const [size, setSize] = useState<[number, number]>([9, 7])
   const [gameSpeed, setGameSpeed] = useState<number>(2)
   const [seed, setSeed] = useState<string>("dev")
   const [bulletTime, setBulletTime] = useState<boolean>(false)
+  const [specials, setSpecials] = useState<{[key:number]:{"power": number}}>(
+    Object.keys(SPECIALS).reduce((a, i, v) => ({ ...a, [SPECIALS[i]]: {"power": 3}}), {}) 
+  )
 
   const [bag, setBag] = useState<MarbleType[]>(
     DEFAULT_COLORS.reduce(
@@ -72,6 +78,7 @@ const App = () => {
     gameSpeed: gameSpeed,
     initialBoard: initialBoard(bag),
     bulletTime: bulletTime,
+    specials: specials
   }
 
   return (

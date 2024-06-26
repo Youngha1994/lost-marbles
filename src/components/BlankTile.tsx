@@ -2,7 +2,7 @@ import * as React from 'react';
 import './BlankTile.css'
 
 export interface BlankTileType {
-  type: "blank",
+  type: "blank";
 };
 
 export interface BlankTileProps {

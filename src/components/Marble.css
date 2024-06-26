@@ -2,8 +2,10 @@
   border-radius: 50%;
   margin: 10%;
   position: relative;
-  opacity: 0.94;
+  opacity: 1;
   overflow: hidden;
+  text-align: center;
+  font-size: 12px;
 }
 
 .marble:before {
