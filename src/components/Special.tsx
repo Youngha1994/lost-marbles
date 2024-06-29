@@ -1,13 +1,15 @@
 export interface SpecialType {
-  type: 'special';
-  color: string;
-  interactType: number;
-  power: number;
+  type: 'special',
+  color: string,
+  interactType: number,
+  power: number,
+  score: number
 }
 
 export interface SpecialProps {
   interactType: number,
-  power: number
+  power: number,
+  score: number
 }
 
 /** @const {string: number}  
@@ -27,15 +29,25 @@ export const SPECIALS = {
   CTRL_A: 5,
 };
 
+export const SPECIALS_POWER = {
+  NONE: 0,
+  ROCKET_HORIZONTAL: 2,
+  ROCKET_VERTICAL: 2,
+  BOMB: 1,
+  CTRL_F: 1,
+  CTRL_A: 1,
+}
+
 const SPECIALS_COLORS = ['black', 'white', 'cyan', 'gray', 'magenta'];
 
-export const Special = (SpecialProps:SpecialProps):SpecialType => {
+export const Special = (specialProps:SpecialProps):SpecialType => {
   return (
     {
       type: "special",
-      color: SPECIALS_COLORS[SpecialProps.interactType],
-      interactType: SpecialProps.interactType,
-      power: SpecialProps.power,
+      color: SPECIALS_COLORS[specialProps.interactType],
+      interactType: specialProps.interactType,
+      power: specialProps.power,
+      score: specialProps.score
     }
   )
 }

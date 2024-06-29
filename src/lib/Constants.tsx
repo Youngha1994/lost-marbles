@@ -25,3 +25,7 @@ export const TRANSLATE_MODES = {
   FROM_0: 1,
   EASE_IN: 2
 }
+
+export const COLORS:string[] = [
+  "red", "yellow", "blue", "orange", "green"
+]

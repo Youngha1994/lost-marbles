@@ -32,3 +32,11 @@ export function ConvertRemToPixels(rem:number):number {
 export function CoordinateFromIndex(index:number, height:number):number[] {
   return [index % height, Math.floor(index/height)]
 }
+
+export const objectMap = (obj:{}, fn:Function):{} =>
+  Object.fromEntries(
+    Object.entries(obj).map(
+      ([k, v], i) => [k, fn(v, k, i)]
+    )
+  )
+  

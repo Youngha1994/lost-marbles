@@ -20,17 +20,13 @@ export const BlankTile = ():BlankTileType => {
   )
 }
 
-export const BlankTileImage = (BlankTileProps:BlankTileProps):React.JSX.Element => {
-  const redraw = BlankTileProps.redrawTiles.includes(BlankTileProps.id);
+export const BlankTileImage = (blankTileProps:BlankTileProps):React.JSX.Element => {
+  const redraw = blankTileProps.redrawTiles.includes(blankTileProps.id);
   if (redraw) {
-    BlankTileProps.manager('redraw', Number(BlankTileProps.id));
-  }
-
-  if (BlankTileProps.translate[BlankTileProps.id][1] !== 0) {
-    BlankTileProps.manager('animateRefill', Number(BlankTileProps.id));
+    blankTileProps.manager('redraw', Number(blankTileProps.id));
   }
   
   return (
-    <div id={BlankTileProps.id.toString()}></div>
+    <div id={blankTileProps.id.toString()}></div>
   )
 }

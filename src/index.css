@@ -3,7 +3,7 @@ body {
   font-family: "FreeMono", "Lucida Console", "Courier New" ;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #2f2f2f;
+  background:#179fdf;
   color: white;
   -webkit-user-select: none; /* Safari */
   -ms-user-select: none; /* IE 10 and IE 11 */

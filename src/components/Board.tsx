@@ -10,23 +10,34 @@ import { ANIMATION_EFFECTS, INTERACTION_STATES, TRANSLATE_MODES } from '../lib/C
 import { ItemType, MovableType } from '../App.tsx';
 
 interface BoardProps {
+  setScore: Function,
+  setMoves: Function,
+  movesFunctions: Function[],
+  scoreList: {},
   size: [number, number],
   gameSpeed: number,
   bag: ItemType[],
   initialBoard: ItemType[],
   bulletTime: boolean,
   specials: {[key:number]: {"power": number}},
+  playable: boolean,
+  gameOver: boolean,
 };
 
-const Board = (BoardProps: BoardProps) => {
+const Board = (boardProps:BoardProps):React.JSX.Element => {
+  const setScore = boardProps.setScore;
+  const setMoves = boardProps.setMoves;
+  const CheckForMoves = boardProps.movesFunctions[0];
+  const CheckForScore = boardProps.movesFunctions[1];
   const [matchIndices, setMatchIndices] = useState<number[]>([]);
   const [interactionIndex, setInteractionIndex] = useState<number>(-1);
 
-  const size:number[] = BoardProps.size;
-  const gameSpeed:number = BoardProps.gameSpeed;
-  const bag:ItemType[] = BoardProps.bag;
-  const bulletTime:boolean = BoardProps.bulletTime;
-  const specials = BoardProps.specials
+  const size:number[] = boardProps.size;
+  const gameSpeed:number = boardProps.gameSpeed;
+  const bag:ItemType[] = boardProps.bag;
+  const bulletTime:boolean = boardProps.bulletTime;
+  const specials = boardProps.specials
+  const scoreList = boardProps.scoreList
 
   let indices:number[] = xrange(size[0] * size[1]);
   const [delay, setDelay] = useState<number[]>(
@@ -40,13 +51,14 @@ const Board = (BoardProps: BoardProps) => {
     Array.from({length:indices.length}, () => [undefined, undefined, TRANSLATE_MODES.TO_0])
   );
   const [translateDrag, setTranslateDrag] = useState<number[]>([0, 0, TRANSLATE_MODES.EASE_IN])
+  const [animationEffect, setAnimationEffect] = useState<[string, number][]>(Array(indices.length).fill([ANIMATION_EFFECTS.NONE, 0]))
 
   const swapped = useRef<boolean>(false);
   const tileWidth = useRef<number>(0);
   const specialSpawn = useRef<{[index: number]: number}>({});
   const lastInteraction = useRef<number[]>([-1, -1]);
   const interactionState = useRef<number>(INTERACTION_STATES.NO_MATCH_AFTER_FALLING);
-  const boardDataSource = useRef<ItemType[]>(BoardProps.initialBoard);
+  const boardDataSource = useRef<ItemType[]>(boardProps.initialBoard);
 
   let gridIndices:number[][] = xrange(size[1]).map(i => 
     xrange(size[0]).map(
@@ -207,11 +219,15 @@ const Board = (BoardProps: BoardProps) => {
             if (0 <= coordinate[0] && coordinate[0] < size[0] && 0 <= coordinate[1] && coordinate[1] < size[1] ) {
               // Trigger specials that are activated by other specials.
               const tileIndex = gridIndices[coordinate[1]][coordinate[0]];
+              console.log("Add", boardDataSource.current[tileIndex]['score'])
+              setScore(boardDataSource.current[tileIndex]['score']);
+              boardDataSource.current[tileIndex]['score'] = 0;
               if (boardDataSource.current[tileIndex]['type'] === 'special' && 
                   boardDataSource.current[tileIndex]['power'] > 0) {
                 const activatedPower = boardDataSource.current[tileIndex]['power'];
                 boardDataSource.current[tileIndex]['power'] = 0;
                 TriggerInteract(tileIndex, activatedPower);
+                TriggerTileEffect(tileIndex, boardDataSource.current[tileIndex]['interactType'], activatedPower)
               };
             };
           })
@@ -264,6 +280,7 @@ const Board = (BoardProps: BoardProps) => {
       } else {
         interactionState.current = INTERACTION_STATES.AVAILABLE;
         setInteractionIndex(-1);
+        CheckForMoves();
         return false
       }
     }
@@ -278,7 +295,6 @@ const Board = (BoardProps: BoardProps) => {
   }
 
   let refillIndices:number[] = [];
-  const [animationEffect, setAnimationEffect] = useState<string[]>(Array(indices.length).fill(ANIMATION_EFFECTS.NONE))
   const CheckForRefill = (id:number) => {
     refillIndices.push(id);
     if (JSON.stringify(Array.from(new Set(matchIndices)).sort()) === JSON.stringify(Array.from(new Set(refillIndices)).sort())) {
@@ -286,12 +302,12 @@ const Board = (BoardProps: BoardProps) => {
       let newTranslate:(number|undefined)[][] = Array.from({length:indices.length}, () => [0, 0]);
       const newBoard = boardDataSource.current.slice(0);
       const newRedraws:number[] = [];
-      const newAnimationEffect:string[] = animationEffect.slice(0);
+      const newAnimationEffect:[string, number][] = animationEffect.slice(0);
       refillIndices.forEach((i) => {
         if (Object.keys(specialSpawn.current).includes(i.toString())) {
           const specialType = specialSpawn.current[i];
-          newBoard[i] = Special({interactType: specialType, power: specials[specialType].power});
-          newAnimationEffect[i] = ANIMATION_EFFECTS.CREATE_SPECIAL;
+          newBoard[i] = Special({interactType: specialType, power: specials[specialType].power, score: scoreList['SPECIAL'][specialType]});
+          newAnimationEffect[i] = [ANIMATION_EFFECTS.CREATE_SPECIAL, 0];
         } else {
           newBoard[i] = BlankTile();
         }
@@ -312,7 +328,7 @@ const Board = (BoardProps: BoardProps) => {
         if (newBoard[i].type === "blank" && bag.length > 0)
           {
             const randomMarble:number = Math.floor(Math.random()*bag.length)
-            newBoard[i] = bag[randomMarble];
+            newBoard[i] = structuredClone(bag[randomMarble]);
             newTranslate[i][0] = undefined; // Signals to the Marble that it should use the dropInDown animation.
           }
       });
@@ -351,27 +367,8 @@ const Board = (BoardProps: BoardProps) => {
         if (!specialTriggered) {
           CheckForMatch();
         };
+        CheckForScore();
       };
-    }
-  }
-
-  const translatedIndices:(number)[] = translate.reduce(function(a:number[], e:(number | undefined)[], i:number) {
-    if (e[1]) {
-      if (e[1] !== 0) {
-        a.push(i);
-      }
-    }
-    return a;
-  }, [])
-  
-  let animateRefillIndices = new Set<number>([]);
-  const CheckForAnimateRefill = (id:number) => {
-    animateRefillIndices.add(id);
-    if (JSON.stringify(translatedIndices.sort()) === JSON.stringify([...animateRefillIndices].sort())) {
-      interactionState.current = INTERACTION_STATES.ANIMATING;
-      setRedrawTiles([]);
-      setTranslate(Array.from({length:indices.length}, () => [0, 0]));
-      CheckForMatch();
     }
   }
 
@@ -417,6 +414,7 @@ const Board = (BoardProps: BoardProps) => {
     newBoardDataSource[newIndex] = boardDataSource.current[interactionIndex];
     newBoardDataSource[interactionIndex] = boardDataSource.current[newIndex];
     swapped.current = true;
+    setMoves(-1);
     boardDataSource.current = newBoardDataSource;
 
     // Change translate state to tell children objects to transform.
@@ -448,6 +446,7 @@ const Board = (BoardProps: BoardProps) => {
     lastInteraction.current = [interactionIndex, newIndex];
     ReleaseInteract();
     setInteractionIndex(-1);
+    CheckForMoves();
     return true;
   }
   
@@ -513,10 +512,10 @@ const Board = (BoardProps: BoardProps) => {
     }
   };
 
-  const ClearTileEffect = (id:number):void => {
+  const TriggerTileEffect = (id:number, animation_effect:string, power:number):void => {
     setAnimationEffect((a) => [
       ...a.slice(0, id), 
-      ANIMATION_EFFECTS.NONE, 
+      [animation_effect, power], 
       ...a.slice(id+1)
     ]);
   };
@@ -531,6 +530,7 @@ const Board = (BoardProps: BoardProps) => {
         interactionState.current = INTERACTION_STATES.ANIMATING;
         const affectedCoordinates:number[][][] = [];
         var i:number;
+        var j:number;
         switch(interactType) {
           case SPECIALS.ROCKET_HORIZONTAL:
             for (i=-power; i<=power; i++) {
@@ -551,7 +551,16 @@ const Board = (BoardProps: BoardProps) => {
             CheckForMatch(affectedCoordinates);
             break;
           case SPECIALS.BOMB:
-            console.log("KABOOM.");
+            for (i=-power; i<=power; i++) {
+              for (j=-power; j<=power; j++) {
+              const affectedCoordinate = [specialCoordinate[0] + i, specialCoordinate[1] + j];
+                if (0 <= affectedCoordinate[0] && affectedCoordinate[0] < size[0] && 
+                    0 <= affectedCoordinate[1] && affectedCoordinate[1] < size[1]) {
+                  affectedCoordinates.push([affectedCoordinate]);
+                }
+              }
+            };
+            CheckForMatch(affectedCoordinates);
             break;
           case SPECIALS.CTRL_A:
             console.log("KABOOOOOOM.");
@@ -573,8 +582,6 @@ const Board = (BoardProps: BoardProps) => {
           return CheckForRefill(id);
         case 'redraw':
           return CheckForRedraw(id);
-        case 'animateRefill':
-          return CheckForAnimateRefill(id);
         case 'special':
           if (Object.keys(specialSpawn.current).includes(id.toString())) {
             return specialSpawn.current[id.toString()]
@@ -598,21 +605,26 @@ const Board = (BoardProps: BoardProps) => {
         case 'translateDrag':
           return translateDrag;
         case 'tileEffect':
-          return ClearTileEffect;
+          return TriggerTileEffect;
         default:
           throw new Error('Function name not found.');
       }
       
     }
   }
+  const className = `animate__animated
+  ${boardProps.playable? ' animate__bounceInLeft': ' animate__bounceOutLeft'}
+  ${boardProps.gameOver? ' animate__hinge': ''}`;
 
   return (
-    <div id='board' 
+    <div 
+      id='board'
+      className={className}
       style={
         {
-          gridTemplateColumns: `repeat(${size[0]}, auto)`,
-          gridTemplateRows: `repeat(${size[1]}, auto)`,
-          margin: `${size[0] > size[1] ? (50*((size[0]-1)/size[1])-50)/(1.148*((size[0]-1)/size[1])): 0}% ${size[0] < size[1] ? size[1]*3: 0}%`
+          gridTemplateColumns: `repeat(${size[0]}, ${size[0] <= size[1]? "auto": "1fr"})`,
+          gridTemplateRows: `repeat(${size[1]}, ${size[0] > size[1]? "auto": "1fr"})`,
+          margin: `${size[0] > size[1] ? (50*((size[0]-1)/size[1])-50)/(1.147*((size[0]-1)/size[1])): 0}% 0`// ${size[0] > size[1] ? size[1]*3: 0}%`
         } as CSSProperties
       }
       onMouseUp = {ReleaseInteract}

@@ -9,21 +9,22 @@ export interface EffectType {
 
 export interface TileEffectProps {
   id: number,
-  animationEffect:string[],
+  animationEffect:[string, number?][],
   manager: Function
 };
 
-export const TileEffect = (TileEffectProps:TileEffectProps):React.JSX.Element => {
-  const id = TileEffectProps.id;
-  const animation = TileEffectProps.animationEffect[id];
-  const ClearTileEffect = TileEffectProps.manager('tileEffect');
+export const TileEffect = (tileEffectProps:TileEffectProps):React.JSX.Element => {
+  const id = tileEffectProps.id;
+  const animation = tileEffectProps.animationEffect[id][0];
+  const power = tileEffectProps.animationEffect[id][1] || 0;
+  const TriggerTileEffect = tileEffectProps.manager('tileEffect');
 
-  const AnimationEnd = (e) => {
+  const AnimationEnd = (e:React.AnimationEvent<HTMLDivElement>):void => {
+    if (e.animationName === ANIMATION_EFFECTS.NONE) return 
     const element = e.target as Element;
-    if (e.target.animationName === ANIMATION_EFFECTS.NONE) return
     element.classList.remove(animation);
     element.classList.add(ANIMATION_EFFECTS.NONE);
-    ClearTileEffect(id);
+    TriggerTileEffect(id, ANIMATION_EFFECTS.NONE);
   }
 
   return (

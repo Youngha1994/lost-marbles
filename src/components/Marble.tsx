@@ -6,13 +6,15 @@ import { CoordinateFromIndex } from '../lib/GridApi.tsx';
 import { MARGIN_PERCENTAGE, TRANSLATE_MODES } from '../lib/Constants.tsx'
 
 export interface MarbleType {
-  type: 'marble';
-  color: string;
+  type: 'marble',
+  color: string,
+  score: number
 }
 
 
 export interface MarbleProps {
-  color: string
+  color: string,
+  score: number
 }
 
 export interface MarbleImageProps {
@@ -27,24 +29,25 @@ export interface MarbleImageStyle extends React.CSSProperties {
   '--animate-duration' : string
 }
 
-export const Marble = (MarbleImageProps:MarbleProps):MarbleType => {
+export const Marble = (MarbleProps:MarbleProps):MarbleType => {
   return (
     {
       type: "marble",
-      color: MarbleImageProps.color
+      color: MarbleProps.color,
+      score: MarbleProps.score
     }
   )
 }
 
-export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Element => {
-  const id:number = MarbleImageProps.id;
-  let delay:number = MarbleImageProps.delay[id];
-  let animationSpeed:number = MarbleImageProps.animationSpeed;
+export const MarbleImage = (marbleImageProps: MarbleImageProps):React.JSX.Element => {
+  const id:number = marbleImageProps.id;
+  let delay:number = marbleImageProps.delay[id];
+  let animationSpeed:number = marbleImageProps.animationSpeed;
   let layer:number = 1;
-  const manager:Function = MarbleImageProps.manager
+  const manager:Function = marbleImageProps.manager
   const translate:number = manager('translate')[id]
   
-  const color:string = MarbleImageProps.boardDataSource[id]['color'];
+  const color:string = marbleImageProps.boardDataSource[id]['color'];
   const matched:boolean = manager('matches').includes(id);
   const redraw:boolean = manager('redraw').includes(id);
   const Interact:Function = manager('interact');
@@ -80,8 +83,7 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
 
   if (translate[0] === undefined) {    // newly spawned
     animation = 'animate__bounceInDown'; 
-  } else if (translate[0] !== 0 || translate[1] !== 0) {    // transforming translate
-
+  } else if (translate[0] !== 0 || translate[1] !== 0 || translate[2] === TRANSLATE_MODES.FROM_0) {    // transforming translate
     styleParams.animationDelay = '0s';
     let translateDrag = [0, 0];
     const marginPercentageReversed = 100/(1-2*MARGIN_PERCENTAGE);
@@ -112,7 +114,6 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
               translateX(${translateDrag[0]}rem)
               translateY(${translate[1]*marginPercentageReversed}%)
               translateY(${translateDrag[1]}rem)
-
               
               translateY(${translateDrag[0]}rem)
               translateX(${translateDrag[1]}rem)
@@ -128,14 +129,14 @@ export const MarbleImage = (MarbleImageProps: MarbleImageProps):React.JSX.Elemen
 
   const AnimationEnd = (e:React.AnimationEvent<HTMLDivElement>):void => {
     if (matched  || animation === 'animate-translate') {
-      MarbleImageProps.manager('refill', Number(id));
+      marbleImageProps.manager('refill', Number(id));
     } else 
     if (redraw) {
-      MarbleImageProps.manager('redraw', Number(id));
+      marbleImageProps.manager('redraw', Number(id));
     } else 
     if (translate[0] !== 0 || translate[1] !== 0) {
       translationAnimation = "";
-      MarbleImageProps.manager('refill', Number(id));
+      marbleImageProps.manager('refill', Number(id));
     }
     if (e.animationName === 'create-special') {
       const element = e.target as Element;

@@ -1,0 +1,4 @@
+.game-data-container {
+  display: flexbox;
+  flex-direction: vertical;
+}
