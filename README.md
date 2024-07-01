@@ -15,12 +15,12 @@ Matching 3+ pops items off the grid back into the bag. \
 Items fall and may combo to more matches. \
 Matched items are replaced from the tray until empty. \
 If the tray is empty, no more items are replaced. \
-Once all matches are finished, items from the bag are returned to the tray. \
+Once all matches are finished, items from the bag are returned to the tray.
 
 In between levels are shops to purchase power-ups or consumables that increase score \
-or manipulate the bag of items. \
+or manipulate the bag of items. 
 
-Players earn money per match, power-up effects, or consumable effects. \
+Players earn money per match, power-up effects, or consumable effects. 
 
 See <i>Item designs</i>.
 
@@ -31,17 +31,14 @@ Gray \
 Black \
 Orange \
 Calico \
-Tabby \
-
-Consider: more or less starting colors? \
-    Harder difficuly adds more colors to the bag?
+Tabby 
 
 ### Collar
 No bell - None \
 Silver - Adds points \
 Cat tag - Dropping increases odds of breaking below item by 25% per square \
-Gold - Adds money
-Red  - Adds combo\
+Gold - Adds money \
+Red  - Adds combo 
 
 ### Specials
 None - None \
@@ -49,4 +46,4 @@ Horizontal - clears horizontal according to power \
 Vertical - clears vertical according to power \
 Bomb - clears neighbors according to power \
 Rotate - rotates neighbors and becomes random color \
-CTRL-F - clears swapped color \
+CTRL-F - clears swapped color 
