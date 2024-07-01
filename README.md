@@ -4,7 +4,7 @@
 <b>Description</b>: Rougelike match-3 game
 
 The game starts on a game board. This game board can be different shapes and sizes.
-Level 1 starts with a 8x8 grid.
+Level 1 starts with a 7x7 grid.
 
 Player starts with a bag of items (starting number TBD). \
 Top tray is filled with items from the bag. \
@@ -14,38 +14,39 @@ Player selects and moves item one space in cardinal direction. \
 Matching 3+ pops items off the grid back into the bag. \
 Items fall and may combo to more matches. \
 Matched items are replaced from the tray until empty. \
-If the tray is empty, no more items are replaced.
-Once all matches are finished, items from the bag are returned to the tray.
+If the tray is empty, no more items are replaced. \
+Once all matches are finished, items from the bag are returned to the tray. \
+
+In between levels are shops to purchase power-ups or consumables that increase score \
+or manipulate the bag of items. \
+
+Players earn money per match, power-up effects, or consumable effects. \
 
 See <i>Item designs</i>.
 
 ## Item designs
-A item can have a color and material or be a specific pattern. \
-Consider: is this too many variations?
-
-### Colors
-Red \
-Yellow \
-Blue \
-Green \
+### Cats
+White \
+Gray \
+Black \
 Orange \
-Purple
+Calico \
+Tabby \
 
 Consider: more or less starting colors? \
     Harder difficuly adds more colors to the bag?
 
-### Material
-Glass - None \
-Clay - Adds points \
-Steel - Dropping increases odds of breaking below item by 25% per square \
-Plastic - Adds combo\
-Agate 
+### Collar
+No bell - None \
+Silver - Adds points \
+Cat tag - Dropping increases odds of breaking below item by 25% per square \
+Gold - Adds money
+Red  - Adds combo\
 
-### Patterned
-Clear - None\
-Mica (Spotted) - \
-Opaque - \
-Swirl - Rotates 3x3 grid.\
-Catseye - Row or column\
-Galaxy - Clears 5x5 grid\
-Sulphide - Objective?\
+### Specials
+None - None \
+Horizontal - clears horizontal according to power \
+Vertical - clears vertical according to power \
+Bomb - clears neighbors according to power \
+Rotate - rotates neighbors and becomes random color \
+CTRL-F - clears swapped color \
