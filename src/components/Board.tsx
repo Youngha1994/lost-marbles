@@ -2,7 +2,7 @@ import * as React from 'react';
 import './Board.css';
 import { useRef, useState, CSSProperties } from 'react';
 import { BlankTile, BlankTileImage, BlankTileProps } from './BlankTile.tsx';
-import { MarbleImage, MarbleImageProps } from './Marble.tsx';
+import { MatchableImage, MatchableImageProps } from './Matchable.tsx';
 import { Special, SPECIALS } from './Special.tsx';
 import { TileEffect } from './TileEffect.tsx';
 import { CalculateAnimationSpeed, CoordinateFromIndex, xrange } from '../lib/GridApi.tsx';
@@ -327,9 +327,9 @@ const Board = (boardProps:BoardProps):React.JSX.Element => {
       indices.forEach((i) => {
         if (newBoard[i].type === "blank" && bag.length > 0)
           {
-            const randomMarble:number = Math.floor(Math.random()*bag.length)
-            newBoard[i] = structuredClone(bag[randomMarble]);
-            newTranslate[i][0] = undefined; // Signals to the Marble that it should use the dropInDown animation.
+            const randomMatchable:number = Math.floor(Math.random()*bag.length)
+            newBoard[i] = structuredClone(bag[randomMatchable]);
+            newTranslate[i][0] = undefined; // Signals to the Matchable that it should use the dropInDown animation.
           }
       });
       boardDataSource.current = newBoard;
@@ -457,7 +457,7 @@ const Board = (boardProps:BoardProps):React.JSX.Element => {
     }
     if (interactionState.current === INTERACTION_STATES.INTERACTING) {
       if (bulletTime) {
-        // Initiate countdown for bullet time and anchor marble to the mouse.
+        // Initiate countdown for bullet time and anchor matchable to the mouse.
       } else {
         const tolerance:number = tileWidth.current * .15;
         const toleranceMultiplier:number = 5;
@@ -633,7 +633,7 @@ const Board = (boardProps:BoardProps):React.JSX.Element => {
       >
        {boardDataSource.current.map(function(item:ItemType, index) {
         if (item.type !== 'blank') {
-          const marbleImageProps:MarbleImageProps = {
+          const matchableImageProps:MatchableImageProps = {
             id: index,
             delay: delay,
             animationSpeed: CalculateAnimationSpeed(gameSpeed),
@@ -643,7 +643,7 @@ const Board = (boardProps:BoardProps):React.JSX.Element => {
           return (
             <div className='tile' key={index}>
               <TileEffect id={index} animationEffect={animationEffect} manager={ManageChildComponent}/>
-              <MarbleImage  {...marbleImageProps} />
+              <MatchableImage  {...matchableImageProps} />
             </div>
           );
         };

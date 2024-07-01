@@ -1,23 +1,23 @@
 import * as React from 'react';
-import './Marble.css'
+import './Matchable.css'
 import 'animate.css';
 import { ItemType } from '../App.tsx'
 import { CoordinateFromIndex } from '../lib/GridApi.tsx';
 import { MARGIN_PERCENTAGE, TRANSLATE_MODES } from '../lib/Constants.tsx'
 
-export interface MarbleType {
-  type: 'marble',
+export interface MatchableType {
+  type: 'matchable',
   color: string,
   score: number
 }
 
 
-export interface MarbleProps {
+export interface MatchableProps {
   color: string,
   score: number
 }
 
-export interface MarbleImageProps {
+export interface MatchableImageProps {
   id: number,
   delay: number[],
   animationSpeed: number,
@@ -25,29 +25,29 @@ export interface MarbleImageProps {
   boardDataSource: ItemType[],
 };
 
-export interface MarbleImageStyle extends React.CSSProperties {
+export interface MatchableImageStyle extends React.CSSProperties {
   '--animate-duration' : string
 }
 
-export const Marble = (MarbleProps:MarbleProps):MarbleType => {
+export const Matchable = (MatchableProps:MatchableProps):MatchableType => {
   return (
     {
-      type: "marble",
-      color: MarbleProps.color,
-      score: MarbleProps.score
+      type: "matchable",
+      color: MatchableProps.color,
+      score: MatchableProps.score
     }
   )
 }
 
-export const MarbleImage = (marbleImageProps: MarbleImageProps):React.JSX.Element => {
-  const id:number = marbleImageProps.id;
-  let delay:number = marbleImageProps.delay[id];
-  let animationSpeed:number = marbleImageProps.animationSpeed;
+export const MatchableImage = (matchableImageProps: MatchableImageProps):React.JSX.Element => {
+  const id:number = matchableImageProps.id;
+  let delay:number = matchableImageProps.delay[id];
+  let animationSpeed:number = matchableImageProps.animationSpeed;
   let layer:number = 1;
-  const manager:Function = marbleImageProps.manager
+  const manager:Function = matchableImageProps.manager
   const translate:number = manager('translate')[id]
   
-  const color:string = marbleImageProps.boardDataSource[id]['color'];
+  const color:string = matchableImageProps.boardDataSource[id]['color'];
   const matched:boolean = manager('matches').includes(id);
   const redraw:boolean = manager('redraw').includes(id);
   const Interact:Function = manager('interact');
@@ -61,7 +61,7 @@ export const MarbleImage = (marbleImageProps: MarbleImageProps):React.JSX.Elemen
     '--animate-duration': `${animationSpeed}s`,
     animationDelay: `${delay}s`,
     zIndex: layer,
-  } as MarbleImageStyle
+  } as MatchableImageStyle
 
 
   if (Interact() === id && interactState) {
@@ -129,14 +129,14 @@ export const MarbleImage = (marbleImageProps: MarbleImageProps):React.JSX.Elemen
 
   const AnimationEnd = (e:React.AnimationEvent<HTMLDivElement>):void => {
     if (matched  || animation === 'animate-translate') {
-      marbleImageProps.manager('refill', Number(id));
+      matchableImageProps.manager('refill', Number(id));
     } else 
     if (redraw) {
-      marbleImageProps.manager('redraw', Number(id));
+      matchableImageProps.manager('redraw', Number(id));
     } else 
     if (translate[0] !== 0 || translate[1] !== 0) {
       translationAnimation = "";
-      marbleImageProps.manager('refill', Number(id));
+      matchableImageProps.manager('refill', Number(id));
     }
     if (e.animationName === 'create-special') {
       const element = e.target as Element;
@@ -156,7 +156,7 @@ export const MarbleImage = (marbleImageProps: MarbleImageProps):React.JSX.Elemen
         }
         <div 
           id={id.toString()}
-          className={`marble animate__animated ${animation}`} 
+          className={`matchable animate__animated ${animation}`} 
           style={styleParams}
           onAnimationEnd={(e) => 
             AnimationEnd(e)

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import './App.css';
-import { Marble, MarbleType } from './components/Marble.tsx';
+import { Matchable, MatchableType } from './components/Matchable.tsx';
 import { BlankTile, BlankTileType } from './components/BlankTile.tsx';
 import { SPECIALS, SPECIALS_POWER, SpecialType } from './components/Special.tsx';
 import { COLORS } from './lib/Constants.tsx';
@@ -10,9 +10,9 @@ import GameData from './components/GameData.tsx';
 import { xrange } from './lib/GridApi.tsx';
 var seedrandom = require('seedrandom');
 
-export type ItemType = BlankTileType | MarbleType | SpecialType;
+export type ItemType = BlankTileType | MatchableType | SpecialType;
 
-export const MovableType = ["marble", "special"]
+export const MovableType = ["matchable", "special"]
 
 interface ScoresParamsType {
   score: number,
@@ -58,15 +58,15 @@ const App = () => {
     SPECIAL: Object.values(SPECIALS).reduce((a, i, v)=>({...a, [i]: 100}), {}),
   });
 
-  const [bag, setBag] = useState<MarbleType[]>(
+  const [bag, setBag] = useState<MatchableType[]>(
     COLORS.reduce(
-      (allMarbles:MarbleType[], color:string) => {
-        const coloredMarbles:MarbleType[] = xrange(20).reduce(
-          (coloredMarbles:MarbleType[]) => {
-            return [...coloredMarbles, Marble({color: color, score: scoreList.DEFAULT[color]})]
+      (allMatchables:MatchableType[], color:string) => {
+        const coloredMatchables:MatchableType[] = xrange(20).reduce(
+          (coloredMatchables:MatchableType[]) => {
+            return [...coloredMatchables, Matchable({color: color, score: scoreList.DEFAULT[color]})]
           }, []
         )
-        return [...allMarbles, ...coloredMarbles]
+        return [...allMatchables, ...coloredMatchables]
       }, []
     )
   );
